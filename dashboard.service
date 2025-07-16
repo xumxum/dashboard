@@ -1,0 +1,16 @@
+[Unit]
+Description=Network Dashboard Flask Application
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=dashboard
+Group=dashboard
+WorkingDirectory=/work/dashboard
+ExecStart=/usr/bin/python3 /work/dashboard/dashboard.py /work/dashboard/config.yaml
+Restart=always
+
+
+[Install]
+WantedBy=multi-user.target
