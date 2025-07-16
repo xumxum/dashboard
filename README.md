@@ -32,15 +32,15 @@ A modern, responsive network dashboard for monitoring and managing hosts with da
 ## � Screenshots
 
 ### Main Dashboard
-![Main Dashboard](screenshots/index.png)
+![Main Dashboard](screenshots/index.png)  
 *The main dashboard showing host cards with status indicators, search functionality, and theme toggle*
 
 ### Host Management
-![Add/Edit Host](screenshots/update_host.png)
+![Add/Edit Host](screenshots/update_host.png)  
 *Add or edit host form with custom icon upload and category selection*
 
 ### Category Management
-![Categories](screenshots/categories.png)
+![Categories](screenshots/categories.png)  
 *Category management interface for organizing hosts*
 
 ## �📋 Prerequisites
