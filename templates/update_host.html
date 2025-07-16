@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ 'Update' if host.id!=0 else 'Add' }} Host - {{ dashboard_name }}</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Dashboard Theme CSS -->
+    <link rel="stylesheet" href="/static/css/dashboard-theme.css">
+</head>
+<body class="form-page">
+    <button class="theme-toggle fixed-position" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+        <i class="fas fa-moon" id="theme-icon"></i>
+    </button>
+    
+    <div class="container custom-container">
+        <h1 class="mt-5">
+            <i class="fas fa-{{ 'edit' if host.id!=0 else 'plus' }}"></i>
+            {{ 'Update' if host.id!=0 else 'Add' }} Host
+        </h1>
+        
+        <form action="{{ url_for('update_host', host_id=host.id) }}" method="post" class="mt-4 host-form" enctype="multipart/form-data">
+
+            {% if host.icon %}
+            <div class="mb-3">
+                {% if host.icon.startswith('fa-') %}
+                    <i class="fas {{ host.icon }} icon-preview"></i>
+                {% else %}
+                    <img src="{{ '/img/' + host.icon }}" style="width:128px;max-height:128px"/>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="mb-3">
+                <label for="name" class="form-label">Host Name:</label>
+                <input type="text" name="name" value="{{ host.name or '' }}" class="form-control" placeholder="e.g. NAS, Router, Printer" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="url" class="form-label">URL or IP:</label>
+                <input type="text" name="url" value="{{ host.url or '' }}" class="form-control" placeholder="e.g. 192.168.1.1 or http://mynas.local" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="location" class="form-label">Location:</label>
+                <select class="form-control" id="location_dropdown" onchange="handleLocationChange()">
+                    <option value="" disabled selected>Select a location</option>
+                </select>
+                <input type="text" id="location_input" name="location" value="{{ host.location or '' }}" class="form-control mt-2" placeholder="Enter new location" style="display: none;">
+                <input type="hidden" id="existing_location" value="{{ host.location or '' }}">
+            </div>
+
+            <div class="mb-3">
+                <label for="category_id" class="form-label">Category:</label>
+                <select class="form-control" id="category_id" name="category_id">
+                    <option value="">-- No Category --</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if host.category_id and host.category_id == category.id %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="notes" class="form-label">Notes:</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3" cols="25" placeholder="Optional notes, credentials reminder, etc.">{{ host.notes or '' }}</textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="icon" class="form-label">Icon (optional):</label>
+                <input class="form-control" name="icon" type="file" accept="image/*"/>
+                <small class="text-muted">Or use FontAwesome icon name (e.g. fa-server, fa-router, fa-printer)</small>
+            </div>
+
+            <button type="submit" class="btn btn-success mt-3">
+                <i class="fas fa-save"></i>
+                {{ 'Update' if host.id!=0 else 'Add' }} Host
+            </button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary mt-2">
+                <i class="fas fa-arrow-left"></i> Cancel
+            </a>
+        </form>
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Dashboard Theme JS -->
+    <script src="/static/js/dashboard-theme.js"></script>
+    
+    <script>
+        // Location dropdown functionality
+        let existingLocations = [];
+        
+        function handleLocationChange() {
+            const dropdown = document.getElementById('location_dropdown');
+            const input = document.getElementById('location_input');
+            
+            if (dropdown.value === 'add_new') {
+                // Show input field for new location
+                input.style.display = 'block';
+                input.value = '';
+                input.focus();
+            } else if (dropdown.value === '') {
+                // "Select a location" is selected, hide input
+                input.style.display = 'none';
+                input.value = '';
+            } else {
+                // Hide input field and set selected location
+                input.style.display = 'none';
+                input.value = dropdown.value;
+            }
+        }
+        
+        function loadLocations() {
+            fetch('/locations')
+                .then(response => response.json())
+                .then(data => {
+                    existingLocations = data.locations;
+                    populateLocationDropdown();
+                })
+                .catch(error => {
+                    console.error('Error loading locations:', error);
+                    // Continue with empty locations
+                    populateLocationDropdown();
+                });
+        }
+        
+        function populateLocationDropdown() {
+            const dropdown = document.getElementById('location_dropdown');
+            const input = document.getElementById('location_input');
+            const existingLocation = document.getElementById('existing_location').value;
+            
+            // Clear existing options and start with default option
+            dropdown.innerHTML = '<option value="" disabled selected>Select a location</option>';
+            
+            // Add existing locations
+            existingLocations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location.value;
+                option.textContent = location.text;
+                dropdown.appendChild(option);
+            });
+            
+            // Add "Add Location" option at the end
+            const addLocationOption = document.createElement('option');
+            addLocationOption.value = 'add_new';
+            addLocationOption.textContent = '-- Add Location --';
+            dropdown.appendChild(addLocationOption);
+            
+            // Handle initialization based on existing location
+            if (existingLocation) {
+                // Check if the existing location is in the dropdown
+                const existingOption = Array.from(dropdown.options).find(option => option.value === existingLocation);
+                
+                if (existingOption) {
+                    // Location exists in dropdown, select it and hide input
+                    dropdown.value = existingLocation;
+                    input.style.display = 'none';
+                    input.value = existingLocation;
+                } else {
+                    // Location doesn't exist in dropdown, show "Add Location" with input
+                    dropdown.value = 'add_new';
+                    input.style.display = 'block';
+                    input.value = existingLocation;
+                }
+            } else {
+                // No existing location (new host), default to "Select a location" and hide input
+                dropdown.value = '';
+                input.style.display = 'none';
+                input.value = '';
+            }
+        }
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadLocations();
+        });
+    </script>
+</body>
+</html>

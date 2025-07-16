@@ -1,0 +1,28 @@
+# ZeeNet2 Dashboard - Python Dependencies
+# 
+# Install all dependencies with:
+# pip install -r requirements.txt
+
+# Core web framework
+Flask>=2.0.0,<3.0.0
+
+# HTTP requests for health checking
+requests>=2.25.0
+
+# YAML configuration file support
+PyYAML>=6.0
+
+# Built-in modules (included with Python, listed for reference)
+# json - JSON data handling
+# os - Operating system interface
+# sys - System-specific parameters
+# argparse - Command-line argument parsing
+# datetime - Date and time handling
+# pprint - Pretty print (for debugging)
+
+# Optional: For development/debugging
+# flask-debugtoolbar>=0.11.0
+# pytest>=6.0.0
+
+# Note: Bootstrap, FontAwesome, and other frontend dependencies 
+# are loaded via CDN in the HTML templates

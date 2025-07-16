@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ dashboard_name }}</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-table@1.23.5/dist/bootstrap-table.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Dashboard Theme CSS -->
+    <link rel="stylesheet" href="/static/css/dashboard-theme.css">
+    
+    <style>
+        /* Page-specific overrides for main dashboard */
+        .card {
+            cursor: pointer;
+            min-height: 180px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="display-4">
+                        <i class="fas fa-network-wired me-3"></i>{{ dashboard_name }}
+                    </h1>
+                    <div class="d-flex align-items-center">
+                        <button class="theme-toggle me-3" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+                            <i class="fas fa-moon" id="theme-icon"></i>
+                        </button>
+                        <a href="{{ url_for('update_host', host_id=0) }}" class="btn btn-primary me-2">
+                            <i class="fas fa-plus"></i> Add Host
+                        </a>
+                        <a href="{{ url_for('categories') }}" class="btn btn-info me-2">
+                            <i class="fas fa-tags"></i> Manage Categories
+                        </a>
+                        <button id="checkAllBtn" class="btn btn-success" onclick="checkAllHosts()">
+                            <i class="fas fa-sync" id="checkAllIcon"></i> <span id="checkAllText">Check All</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search Filter -->
+                <div class="row mb-4">
+                    <div class="col-md-6 col-lg-4">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" id="searchFilter" class="form-control" placeholder="Search hosts by name, URL, location, or notes..." autocomplete="off">
+                            <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {% if hosts %}
+                    {% set hosts_by_category = {} %}
+                    {% for host in hosts %}
+                        {% set category = host.category_name or 'Uncategorized' %}
+                        {% if category not in hosts_by_category %}
+                            {% set _ = hosts_by_category.update({category: []}) %}
+                        {% endif %}
+                        {% set _ = hosts_by_category[category].append(host) %}
+                    {% endfor %}
+
+                    {% for category, category_hosts in hosts_by_category.items() | sort %}
+                    <div class="category-section">
+                        <h3 class="mb-3">
+                            <i class="fas fa-folder"></i> {{ category }}
+                            <span class="badge bg-secondary">{{ category_hosts|length }}</span>
+                        </h3>
+                        
+                        <div class="host-grid">
+                            {% for host in category_hosts %}
+                            <div class="card h-100 host-card" 
+                                
+                                 onclick="openHost({{ host.id }})"
+                                 data-bs-html="true" 
+                                 data-name="{{ host.name | lower }}"
+                                 data-url="{{ host.url | lower }}"
+                                 data-location="{{ (host.location or '') | lower }}"
+                                 data-notes="{{ (host.notes or '') | lower }}"
+                                 data-notes-original="{{ host.notes or '' }}"
+                                 data-last-checked="{{ host.last_checked or '' }}"
+                                 data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true" title=""
+                                 data-category="{{ (host.category_name or '') | lower }}">
+                                 
+                                <div class="card-body">
+                                    <span class="badge status-badge status-{{ host.status or 'unknown' }}">
+                                        {% if host.status == 'online' %}
+                                            <i class="fas fa-check"></i> Online
+                                        {% elif host.status == 'offline' %}
+                                            <i class="fas fa-times"></i> Offline
+                                        {% else %}
+                                            <i class="fas fa-question"></i> Unknown
+                                        {% endif %}
+                                    </span>
+                                    
+                                    <div class="text-center mb-3">
+                                        {% if host.icon %}
+                                            {% if host.icon.startswith('fa-') %}
+                                                <i class="fas {{ host.icon }} host-icon"></i>
+                                            {% else %}
+                                                <img src="{{ '/img/' + host.icon }}" class="host-icon" style="max-width: 64px; max-height: 64px;" alt="Host icon"/>
+                                            {% endif %}
+                                        {% else %}
+                                            <i class="fas fa-server host-icon"></i>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <h5 class="card-title text-center">{{ host.name }}</h5>
+                                    <p class="host-url text-center ms-2">{{ host.url }}</p>
+                                    
+                                    {% if host.location %}
+                                    <p class="text-muted text-center mb-1">
+                                        <i class="fas fa-map-marker-alt"></i> {{ host.location }}
+                                    </p>
+                                    {% endif %}
+                                    
+                                    <br>
+                                    <!-- {% if host.last_checked %}
+                                    <p class="text-muted text-center mb-1" style="font-size: 0.8rem;">
+                                        Last checked: {{ host.last_checked[:19].replace('T', ' ') }}
+                                    </p>
+                                    {% endif %} -->
+                                    
+                                    <!-- {% if host.notes %}
+                                    <p class="text-muted" style="font-size: 0.9rem;" title="{{ host.notes }}">
+                                        {{ host.notes[:50] }}{% if host.notes|length > 50 %}...{% endif %}
+                                    </p>
+                                    {% endif %} -->
+                                    
+                                    <div class="actions-btn" >
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('check_single_host', host_id=host.id) }}" 
+                                               class="btn btn-sm btn-outline-success" onclick="event.stopPropagation();" 
+                                               title="Check Status">
+                                                <i class="fas fa-sync"></i>
+                                            </a>
+                                            <a href="{{ url_for('update_host', host_id=host.id) }}" 
+                                               class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();" 
+                                               title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{{ url_for('delete_host', host_id=host.id) }}" 
+                                               class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation();" 
+                                               title="Delete"
+                                               onclick="return confirm('Are you sure you want to delete this host?')">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center mt-5">
+                    <i class="fas fa-server" style="font-size: 4rem; color: #dee2e6;"></i>
+                    <h3 class="mt-3 text-muted">No hosts configured</h3>
+                    <p class="text-muted">Start by adding your first host to the dashboard.</p>
+                    <a href="{{ url_for('update_host', host_id=0) }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus"></i> Add First Host
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Dashboard Theme JS -->
+    <script src="/static/js/dashboard-theme.js"></script>
+    
+    <script>
+        // Function to format relative time
+        function formatRelativeTime(timestamp) {
+            if (!timestamp) return 'Never';
+            
+            const now = new Date();
+            const past = new Date(timestamp);
+            const diffMs = now - past;
+            
+            // Handle invalid dates
+            if (isNaN(diffMs)) return timestamp;
+            
+            const diffSeconds = Math.floor(diffMs / 1000);
+            const diffMinutes = Math.floor(diffSeconds / 60);
+            const diffHours = Math.floor(diffMinutes / 60);
+            const diffDays = Math.floor(diffHours / 24);
+            
+            if (diffSeconds < 10) {
+                return 'Just now';
+            } else if (diffSeconds < 60) {
+                return `${diffSeconds} seconds ago`;
+            } else if (diffMinutes < 60) {
+                return diffMinutes === 1 ? '1 minute ago' : `${diffMinutes} minutes ago`;
+            } else if (diffHours < 24) {
+                const remainingMinutes = diffMinutes % 60;
+                if (diffHours === 1) {
+                    return remainingMinutes > 0 ? `1h ${remainingMinutes}m ago` : '1 hour ago';
+                } else {
+                    return remainingMinutes > 0 ? `${diffHours}h ${remainingMinutes}m ago` : `${diffHours} hours ago`;
+                }
+            } else if (diffDays < 7) {
+                return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+            } else if (diffDays < 30) {
+                const weeks = Math.floor(diffDays / 7);
+                return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+            } else if (diffDays < 365) {
+                const months = Math.floor(diffDays / 30);
+                return months === 1 ? '1 month ago' : `${months} months ago`;
+            } else {
+                const years = Math.floor(diffDays / 365);
+                return years === 1 ? '1 year ago' : `${years} years ago`;
+            }
+        }
+        
+        // Function to update all relative timestamps and tooltips
+        function updateRelativeTimestamps() {
+            document.querySelectorAll('.host-card[data-last-checked]').forEach(card => {
+                const timestamp = card.getAttribute('data-last-checked');
+                const originalNotes = card.getAttribute('data-notes-original') || '';
+                
+                // Generate new tooltip content
+                let tooltipContent = "<b>Notes:</b><br>";
+                if (originalNotes && originalNotes.trim() !== '') {
+                    tooltipContent += originalNotes + "<br><br>";
+                } else {
+                    tooltipContent += "No notes<br><br>";
+                }
+                
+                if (timestamp && timestamp.trim() !== '') {
+                    const relativeTime = formatRelativeTime(timestamp);
+                    tooltipContent += "<b>Last checked:</b><br>" + relativeTime;
+                } else {
+                    tooltipContent += "<b>Last checked:</b><br>Never";
+                }
+                
+                // Get existing tooltip instance and dispose it
+                let tooltip = bootstrap.Tooltip.getInstance(card);
+                if (tooltip) {
+                    tooltip.dispose();
+                }
+                
+                // Create new tooltip with updated content
+                card.setAttribute('title', tooltipContent);
+                new bootstrap.Tooltip(card, { 
+                    html: true,
+                    placement: 'top'
+                });
+            });
+        }
+        
+        function openHost(hostId) {
+            window.open('/open_host/' + hostId, '_blank');
+        }
+        
+        // Check All Hosts functionality with loading state
+        function checkAllHosts() {
+            const btn = document.getElementById('checkAllBtn');
+            const icon = document.getElementById('checkAllIcon');
+            const text = document.getElementById('checkAllText');
+            
+            // Disable button and show loading state
+            btn.disabled = true;
+            btn.classList.add('disabled');
+            icon.className = 'fas fa-spinner fa-spin';
+            text.textContent = 'Checking...';
+            
+            // Make AJAX request to check all hosts
+            fetch('/check_all_hosts?ajax=1', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Network response was not ok');
+                    }
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        console.log(data.message);
+                        // Optionally show a toast notification
+                        if (data.checked > 0) {
+                            showNotification(data.message, 'success');
+                        }
+                        // Refresh the page to show updated status
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        throw new Error(data.message || 'Unknown error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking hosts:', error);
+                    showNotification('Error checking hosts. Please try again.', 'error');
+                })
+                .finally(() => {
+                    // Re-enable button and restore original state
+                    btn.disabled = false;
+                    btn.classList.remove('disabled');
+                    icon.className = 'fas fa-sync';
+                    text.textContent = 'Check All';
+                });
+        }
+        
+        // Simple notification function
+        function showNotification(message, type = 'info') {
+            // Create a simple toast notification
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
+        
+        // Search functionality
+        function filterHosts() {
+            const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
+            const hostCards = document.querySelectorAll('.host-card');
+            const categorySection = document.querySelectorAll('.category-section');
+            
+            if (!searchTerm) {
+                // Show all hosts and categories
+                hostCards.forEach(card => {
+                    card.classList.remove('search-hidden');
+                });
+                categorySection.forEach(section => {
+                    section.style.display = 'block';
+                    const badge = section.querySelector('.badge');
+                    const categoryHosts = section.querySelectorAll('.host-card');
+                    badge.textContent = categoryHosts.length;
+                });
+                return;
+            }
+            
+            let visibleHosts = 0;
+            
+            // Filter hosts
+            hostCards.forEach(card => {
+                const name = card.dataset.name || '';
+                const url = card.dataset.url || '';
+                const location = card.dataset.location || '';
+                const notes = card.dataset.notes || '';
+                const category = card.dataset.category || '';
+                
+                const searchableText = name + ' ' + url + ' ' + location + ' ' + notes + ' ' + category;
+                
+                if (searchableText.includes(searchTerm)) {
+                    card.classList.remove('search-hidden');
+                    visibleHosts++;
+                } else {
+                    card.classList.add('search-hidden');
+                }
+            });
+            
+            // Update category counts and hide empty categories
+            categorySection.forEach(section => {
+                const visibleCards = section.querySelectorAll('.host-card:not(.search-hidden)');
+                const badge = section.querySelector('.badge');
+                
+                if (visibleCards.length > 0) {
+                    section.style.display = 'block';
+                    badge.textContent = visibleCards.length;
+                } else {
+                    section.style.display = 'none';
+                }
+            });
+        }
+        
+        // Initialize search functionality
+        $(document).ready(function() {
+            const searchInput = document.getElementById('searchFilter');
+            const clearButton = document.getElementById('clearSearch');
+            
+            if (searchInput) {
+                // Real-time search as user types
+                searchInput.addEventListener('input', filterHosts);
+                
+                // Clear search
+                clearButton.addEventListener('click', function() {
+                    searchInput.value = '';
+                    filterHosts();
+                    searchInput.focus();
+                });
+                
+                // Clear search on Escape key
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        searchInput.value = '';
+                        filterHosts();
+                    }
+                });
+            }
+            
+            // Initialize Bootstrap tooltips with initial content
+            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(element => {
+                // Set initial tooltip content
+                const originalNotes = element.getAttribute('data-notes-original') || '';
+                const timestamp = element.getAttribute('data-last-checked');
+                
+                let tooltipContent = "<b>Notes:</b><br>";
+                if (originalNotes && originalNotes.trim() !== '') {
+                    tooltipContent += originalNotes + "<br><br>";
+                } else {
+                    tooltipContent += "No notes<br><br>";
+                }
+                
+                if (timestamp && timestamp.trim() !== '') {
+                    const relativeTime = formatRelativeTime(timestamp);
+                    tooltipContent += "<b>Last checked:</b><br>" + relativeTime;
+                } else {
+                    tooltipContent += "<b>Last checked:</b><br>Never";
+                }
+                
+                element.setAttribute('title', tooltipContent);
+                new bootstrap.Tooltip(element, { html: true });
+            });
+            
+            // Update relative timestamps on page load
+            updateRelativeTimestamps();
+            
+            // Update relative timestamps every 30 seconds
+            setInterval(updateRelativeTimestamps, 5000);
+        });
+    </script>
+</body>
+</html>

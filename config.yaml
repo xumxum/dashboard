@@ -1,0 +1,52 @@
+# Dashboard Configuration
+# 
+# This file contains all configuration settings for the dashboard application.
+# Copy this file and modify the values according to your environment.
+
+# Application configuration
+app:
+  # Dashboard name (displayed in browser title and headers)
+  name: "Dashboard"
+  
+  # Maximum file size for icon uploads (in MB)
+  max_upload_size: 5
+  
+  # Allowed file extensions for icon uploads
+  allowed_extensions:
+    - png
+    - jpg
+    - jpeg
+    - gif
+    - svg
+  
+  # Health check timeout in seconds
+  health_check_timeout: 5
+
+# Database and storage configuration
+database:
+  # Full path to the SQLite database file (directory will be created if needed)
+  file: "./dashboard_data/dashboard.db"
+  
+  # Directory for uploaded icons (relative to database file location)
+  icons_dir: "icons"
+
+# Web server configuration
+server:
+  # Host to bind the web server to
+  # Use "0.0.0.0" to bind to all interfaces
+  # Use "127.0.0.1" or "localhost" to bind only to localhost
+  host: "0.0.0.0"
+  
+  # Port to bind the web server to
+  port: 8003
+  
+  # Enable Flask debug mode (set to false for production)
+  debug: true
+
+# Optional: Logging configuration (future feature)
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
+  
+  # Log file path (leave empty to log to console only)
+  file: ""
