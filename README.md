@@ -1,4 +1,4 @@
-# ZeeNet2 Dashboard
+# Nework Dashboard
 
 A modern, responsive network dashboard for monitoring and managing hosts with dark/light theme support.
 
@@ -29,7 +29,21 @@ A modern, responsive network dashboard for monitoring and managing hosts with da
 - **Input Validation**: Text sanitization and validation
 - **Static Assets**: Centralized CSS/JS for maintainability
 
-## 📋 Prerequisites
+## � Screenshots
+
+### Main Dashboard
+![Main Dashboard](screenshots/index.png)
+*The main dashboard showing host cards with status indicators, search functionality, and theme toggle*
+
+### Host Management
+![Add/Edit Host](screenshots/update_host.png)
+*Add or edit host form with custom icon upload and category selection*
+
+### Category Management
+![Categories](screenshots/categories.png)
+*Category management interface for organizing hosts*
+
+## �📋 Prerequisites
 
 - Python 3.7 or higher
 - Web browser with JavaScript enabled
